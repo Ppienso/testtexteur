@@ -1,0 +1,288 @@
+<!doctype html>
+
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>IPPedition&code — Éditeur Word+</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <style>
+    :root{
+      --bg:#e9f0f6; --panel:#ffffff; --muted:#6b7280; --blue-1:#2563eb; --violet:#7c3aed; --green:#10b981; --toolbar-gradient: linear-gradient(90deg,var(--blue-1),var(--violet));
+      --shadow: 0 8px 30px rgba(2,6,23,.08);
+      --page-width:850px; --page-padding:48px 64px;
+    }
+    html,body{height:100%;margin:0;font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;background:var(--bg);color:#0f172a}
+    .container{max-width:1240px;margin:22px auto;padding:18px}
+    .top{display:flex;gap:12px;align-items:center}
+    .brand{font-weight:700;font-size:18px}/* toolbar area compact */
+.toolbar-wrap{display:flex;gap:12px;align-items:center;margin-left:auto;flex-wrap:wrap}
+.toolbar{display:flex;gap:6px;align-items:center;padding:8px;border-radius:10px;background:var(--panel);box-shadow:var(--shadow);}
+.btn{border:0;padding:8px 10px;border-radius:8px;font-weight:600;cursor:pointer;outline:none;transition:transform .12s ease,box-shadow .12s ease}
+.btn:active{transform:translateY(1px)}
+.icon-btn{padding:8px;border-radius:8px;background:transparent;border:1px solid rgba(15,23,42,0.06)}
+.primary{background:var(--toolbar-gradient);color:#fff;box-shadow:0 6px 18px rgba(99,102,241,.12)}
+.accent-green{background:linear-gradient(90deg,#34d399,#10b981);color:#fff}
+.accent-violet{background:linear-gradient(90deg,#7c3aed,#6d28d9);color:#fff}
+
+.editor-stage{margin-top:18px;display:flex;gap:18px}
+.page-area{flex:1;display:flex;justify-content:center}
+.page-viewport{width:var(--page-width);min-height:1100px;background:var(--panel);box-shadow:0 12px 34px rgba(2,6,23,.08);padding:var(--page-padding);border-radius:6px;border:1px solid rgba(2,6,23,.04);overflow:auto;position:relative}
+
+.page{min-height:950px}
+.editor{min-height:820px;outline:none}
+.editor p{line-height:1.6;margin:0 0 12px}
+table{border-collapse:collapse;margin:12px 0;width:100%}
+th,td{border:1px solid #cbd5e1;padding:8px}
+
+/* header/footer editable */
+.doc-header,.doc-footer{width:100%;padding:8px;border-radius:6px;color:#334155}
+.doc-header{border-bottom:1px dashed rgba(15,23,42,.06);margin-bottom:12px}
+.doc-footer{border-top:1px dashed rgba(15,23,42,.06);margin-top:12px;font-size:13px;display:flex;justify-content:space-between}
+
+/* side */
+.side{width:300px;display:flex;flex-direction:column;gap:12px}
+.card{background:linear-gradient(180deg,#fff,#fbfdff);padding:12px;border-radius:8px;box-shadow:var(--shadow)}
+.muted{color:var(--muted);font-size:13px}
+
+/* notification */
+.notif{position:fixed;right:22px;bottom:22px;background:#0f172a;color:#fff;padding:12px 14px;border-radius:8px;box-shadow:0 10px 30px rgba(2,6,23,.2);transform:translateY(20px);opacity:0;pointer-events:none;transition:all .28s cubic-bezier(.2,.9,.2,1)}
+.notif.show{transform:translateY(0);opacity:1;pointer-events:auto}
+
+/* templates */
+.templates{display:flex;gap:8px;flex-wrap:wrap}
+.tpl{padding:8px;border-radius:6px;border:1px solid rgba(2,6,23,.06);cursor:pointer}
+
+/* themes */
+.themes{display:flex;gap:8px}
+.theme-swatch{width:28px;height:20px;border-radius:4px;border:1px solid rgba(2,6,23,.06);cursor:pointer}
+
+/* zoom */
+.zoom-controls{display:flex;gap:6px;align-items:center}
+.zoom-value{font-weight:700}
+
+/* responsive */
+@media (max-width:1100px){.side{display:none}.container{padding:12px}}
+
+  </style>
+  <!-- lucide icons CDN -->
+  <script src="https://unpkg.com/lucide@0.257.0/dist/lucide.min.js"></script>
+  <!-- docx library for .docx export -->
+  <script src="https://unpkg.com/docx@7.3.0/build/index.umd.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="top">
+      <div class="brand">IPPedition&code</div><div class="toolbar-wrap">
+    <div class="toolbar" role="toolbar" aria-label="édition">
+      <button class="btn icon-btn" onclick="exec('bold')" title="Gras">B</button>
+      <button class="btn icon-btn" onclick="exec('italic')" title="Italique">I</button>
+      <button class="btn icon-btn" onclick="exec('underline')" title="Souligné">U</button>
+      <select id="fontFamily" onchange="setFont(this.value)"><option value="Segoe UI">Segoe UI</option><option value="Calibri">Calibri</option><option value="Arial">Arial</option><option value="Times New Roman">Times New Roman</option></select>
+      <select id="fontSize" onchange="setFontSize(this.value)"><option>12</option><option selected>14</option><option>16</option><option>18</option><option>20</option></select>
+      <input type="color" id="fontColor" title="Couleur du texte" onchange="setColor(this.value)" />
+      <input type="color" id="hiliteColor" title="Surlignage" onchange="setHilite(this.value)" />
+      <button class="btn icon-btn" onclick="exec('justifyLeft')">⮜</button>
+      <button class="btn icon-btn" onclick="exec('justifyCenter')">⮯</button>
+      <button class="btn icon-btn" onclick="exec('justifyRight')">⮞</button>
+      <button class="btn icon-btn" onclick="exec('insertUnorderedList')">•</button>
+      <button class="btn icon-btn" onclick="exec('insertOrderedList')">1.</button>
+    </div>
+
+    <div class="toolbar">
+      <button class="btn primary" onclick="downloadDoc()">.doc</button>
+      <button class="btn accent-green" onclick="exportDocx()">.docx</button>
+      <button class="btn accent-violet" onclick="downloadHtml()">.html</button>
+      <button class="btn" onclick="printPreview()">Imprimer / PDF</button>
+    </div>
+
+    <div class="toolbar">
+      <button class="btn" onclick="applyCoding(true)">🔒 Coder</button>
+      <button class="btn" onclick="applyCoding(false)">🔓 Décoder</button>
+    </div>
+  </div>
+</div>
+
+<div class="editor-stage">
+  <div class="page-area">
+    <div id="pageViewport" class="page-viewport">
+
+      <div contenteditable="true" id="docHeader" class="doc-header" placeholder="En-tête (double-cliquez pour éditer)">En-tête du document</div>
+
+      <div id="page" class="page">
+        <div id="editor" class="editor" contenteditable="true" spellcheck="true">
+          <h2 style="margin-top:0">Nouveau document</h2>
+          <p>IPPedition&code — Éditeur avancé.</p>
+          <p>Clique droit / sélectionnez pour formater. Utilisez les modèles à droite pour démarrer rapidement.</p>
+        </div>
+      </div>
+
+      <div contenteditable="true" id="docFooter" class="doc-footer">
+        <div id="footerLeft">Pied de page</div>
+        <div id="footerRight">Page <span id="pageNumber">1</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <aside class="side">
+    <div class="card">
+      <div class="muted">Modèles</div>
+      <div class="templates" style="margin-top:8px">
+        <div class="tpl" onclick="applyTemplate('blank')">Page blanche</div>
+        <div class="tpl" onclick="applyTemplate('report')">Rapport</div>
+        <div class="tpl" onclick="applyTemplate('letter')">Lettre</div>
+        <div class="tpl" onclick="applyTemplate('note')">Note</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="muted">Thèmes</div>
+      <div class="themes" style="margin-top:8px">
+        <div class="theme-swatch" style="background:linear-gradient(90deg,var(--blue-1),var(--violet))" onclick="setTheme('mix')"></div>
+        <div class="theme-swatch" style="background:linear-gradient(90deg,#34d399,#10b981)" onclick="setTheme('green')"></div>
+        <div class="theme-swatch" style="background:linear-gradient(90deg,#7c3aed,#6d28d9)" onclick="setTheme('violet')"></div>
+        <div class="theme-swatch" style="background:#0f172a" onclick="setTheme('dark')"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="muted">Zoom</div>
+      <div class="zoom-controls" style="margin-top:8px">
+        <button class="btn icon-btn" onclick="zoomOut()">-</button>
+        <div class="zoom-value" id="zoomVal">100%</div>
+        <button class="btn icon-btn" onclick="zoomIn()">+</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="muted">Actions</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+        <button class="btn" onclick="cleanFormatting()">Nettoyer format</button>
+        <button class="btn" onclick="copyToClipboard()">Copier HTML</button>
+        <button class="btn" onclick="manualSave()">Sauvegarder maintenant</button>
+        <button class="btn" onclick="loadSaved()">Charger sauvegarde</button>
+      </div>
+    </div>
+  </aside>
+</div>
+
+  </div>  <div id="notif" class="notif">Notification</div>  <script>
+    // elements
+    const editor = document.getElementById('editor');
+    const notif = document.getElementById('notif');
+    const pageViewport = document.getElementById('pageViewport');
+    const pageNumberEl = document.getElementById('pageNumber');
+    const docHeader = document.getElementById('docHeader');
+    const docFooter = document.getElementById('docFooter');
+
+    // state
+    let zoomPercent = 100;
+    let autosaveTimer = null;
+
+    // notification
+    function showNotif(text){ notif.textContent = text; notif.classList.add('show'); setTimeout(()=>notif.classList.remove('show'),2200); }
+
+    // exec simple commands
+    function exec(cmd, val=null){ document.execCommand(cmd, false, val); editor.focus(); }
+
+    // styling functions
+    function setFont(fam){ document.execCommand('fontName', false, fam); editor.focus(); }
+    function setFontSize(sz){ document.execCommand('fontSize', false, 4); // workaround: we'll set inline size
+      // apply to selection
+      const sel = window.getSelection(); if(sel && sel.rangeCount){ const range = sel.getRangeAt(0); const span = document.createElement('span'); span.style.fontSize = sz + 'px'; span.appendChild(range.extractContents()); range.insertNode(span); }
+    }
+    function setColor(v){ document.execCommand('foreColor', false, v); }
+    function setHilite(v){ document.execCommand('backColor', false, v); }
+
+    // table insert
+    function showTableDialog(){ const rows = parseInt(prompt('Nombre de lignes :', '3')) || 0; const cols = parseInt(prompt('Nombre de colonnes :', '3')) || 0; if(rows<=0||cols<=0)return; insertTable(rows,cols);}    
+    function insertTable(rows, cols){ const tbl=document.createElement('table'); for(let r=0;r<rows;r++){ const tr=document.createElement('tr'); for(let c=0;c<cols;c++){ const td=document.createElement(r===0?'th':'td'); td.contentEditable='true'; td.style.padding='6px'; td.innerHTML=r===0?('Entête '+(c+1)):(''); tr.appendChild(td);} tbl.appendChild(tr);} insertNodeAtCaret(tbl); }
+    function insertNodeAtCaret(node){ let sel=window.getSelection(); if(!sel||sel.rangeCount===0){ editor.appendChild(node); return;} const range=sel.getRangeAt(0); range.deleteContents(); range.insertNode(node); range.setStartAfter(node); range.collapse(true); sel.removeAllRanges(); sel.addRange(range); editor.focus(); }
+
+    // cleaning
+    function cleanFormatting(){ const html=editor.innerHTML; const tmp=document.createElement('div'); tmp.innerHTML=html; tmp.querySelectorAll('*').forEach(el=>{ el.removeAttribute('style'); [...el.attributes].forEach(attr=>{ if(attr.name.startsWith('on')) el.removeAttribute(attr.name); }); }); editor.innerHTML=tmp.innerHTML; showNotif('Format nettoyé'); }
+
+    // clipboard
+    async function copyToClipboard(){ try{ await navigator.clipboard.writeText(editor.innerHTML); showNotif('HTML copié'); }catch(e){ showNotif('Impossible de copier'); } }
+
+    // coding/decoding (same as C++ logic)
+    function codeText(text){ let res=''; for(let i=0;i<text.length;i++){ let a=text[i]; if(a>='f' && a<='z') res+=String.fromCharCode(a.charCodeAt(0)-5); else if(a>='a' && a<='e') res+=String.fromCharCode(a.charCodeAt(0)+21); else if(a>='F' && a<='Z') res+=String.fromCharCode(a.charCodeAt(0)-5); else if(a>='A' && a<='E') res+=String.fromCharCode(a.charCodeAt(0)+21); else res+=a; } return res; }
+    function decodeText(text){ let res=''; for(let i=0;i<text.length;i++){ let a=text[i]; if(a>='a' && a<='u') res+=String.fromCharCode(a.charCodeAt(0)+5); else if(a>='v' && a<='z') res+=String.fromCharCode(a.charCodeAt(0)-21); else if(a>='A' && a<='U') res+=String.fromCharCode(a.charCodeAt(0)+5); else if(a>='V' && a<='Z') res+=String.fromCharCode(a.charCodeAt(0)-21); else res+=a; } return res; }
+
+    function applyCoding(encode=true){ const sel=window.getSelection(); const selectedText = sel && sel.toString(); if(!selectedText){ traverseAndTransform(editor, encode?codeText:decodeText); showNotif(encode? 'Texte codé ✅':'Texte décodé 🔓'); } else { const range=sel.getRangeAt(0); const result = encode? codeText(selectedText): decodeText(selectedText); range.deleteContents(); range.insertNode(document.createTextNode(result)); showNotif(encode? 'Sélection codée ✅':'Sélection décodée 🔓'); } }
+
+    function traverseAndTransform(root, transformer){ const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false); const toChange=[]; while(walker.nextNode()){ const node = walker.currentNode; if(node.nodeValue.trim().length>0) toChange.push(node); } toChange.forEach(tn=>{ tn.nodeValue = transformer(tn.nodeValue); }); }
+
+    // zoom affecting whole page
+    function setZoom(pct){ zoomPercent = Math.max(40, Math.min(240, pct)); pageViewport.style.transform = `scale(${zoomPercent/100})`; pageViewport.style.transformOrigin = 'top left'; document.getElementById('zoomVal').textContent = zoomPercent + '%'; }
+    function zoomIn(){ setZoom(zoomPercent + 10); }
+    function zoomOut(){ setZoom(zoomPercent - 10); }
+    setZoom(100);
+
+    // templates
+    function applyTemplate(name){ if(name==='blank'){ editor.innerHTML='<h2 style="margin-top:0">Nouveau document</h2><p></p>'; docHeader.innerText='En-tête du document'; docFooter.querySelector('#footerLeft').innerText='Pied de page'; } else if(name==='report'){ editor.innerHTML='<h1 style="margin-top:0">Rapport</h1><p><em>Résumé :</em></p><p></p>'; docHeader.innerText='Rapport — IPPedition&code'; docFooter.querySelector('#footerLeft').innerText='Confidentiel'; } else if(name==='letter'){ editor.innerHTML='<p>Date: ' + new Date().toLocaleDateString() + '</p><p>Destinataire,</p><p></p><p>Cordialement,</p><p></p>'; docHeader.innerText='Lettre'; docFooter.querySelector('#footerLeft').innerText='Signature'; } else if(name==='note'){ editor.innerHTML='<h3 style="margin-top:0">Note interne</h3><p></p>'; docHeader.innerText='Note interne'; docFooter.querySelector('#footerLeft').innerText='Service'; } showNotif('Modèle appliqué'); }
+
+    // themes
+    function setTheme(t){ if(t==='mix'){ document.documentElement.style.setProperty('--bg','#e9f0f6'); document.documentElement.style.setProperty('--toolbar-gradient','linear-gradient(90deg,var(--blue-1),var(--violet))'); } else if(t==='green'){ document.documentElement.style.setProperty('--bg','#eefcf6'); document.documentElement.style.setProperty('--toolbar-gradient','linear-gradient(90deg,#34d399,#10b981)'); } else if(t==='violet'){ document.documentElement.style.setProperty('--bg','#f6f3ff'); document.documentElement.style.setProperty('--toolbar-gradient','linear-gradient(90deg,#7c3aed,#6d28d9)'); } else if(t==='dark'){ document.documentElement.style.setProperty('--bg','#0b1220'); document.documentElement.style.setProperty('--toolbar-gradient','linear-gradient(90deg,#0f172a,#0b1220)'); document.body.style.color='#e6eef8'; } showNotif('Thème changé'); }
+
+    // header/footer editing double click hints
+    [docHeader, docFooter].forEach(el=> el.addEventListener('dblclick', ()=> el.focus()));
+
+    // page number simulation (very simple: always 1 for this single-page layout)
+    function updatePageNumber(){ pageNumberEl.textContent = '1'; }
+    updatePageNumber();
+
+    // print preview / pdf
+    function printPreview(){ // open a new window with the page content
+      const win = window.open('', '_blank');
+      const html = `<!doctype html><html><head><meta charset="utf-8"><title>Preview</title><style>body{font-family:Segoe UI,Arial;padding:30px;background:#f3f4f6} .page{width:210mm;min-height:297mm;margin:0 auto;background:#fff;padding:20mm;border:1px solid #ddd;box-sizing:border-box}</style></head><body><div class="page">` + docHeader.outerHTML + document.getElementById('page').outerHTML + docFooter.outerHTML + `</div></body></html>`;win.document.write(html); win.document.close(); win.focus(); // user can print from there
+}
+
+// export .doc/.html
+function getFullHtml(){ const content = docHeader.outerHTML + document.getElementById('page').outerHTML + docFooter.outerHTML; return `<!doctype html><html><head><meta charset="utf-8"><title>Document</title></head><body>${content}</body></html>`; }
+function downloadDoc(){ const header = "﻿"; const html = getFullHtml(); const blob = new Blob([header + html], {type: 'application/msword'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'document.doc'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); showNotif('.doc généré'); }
+function downloadHtml(){ const html = getFullHtml(); const blob = new Blob([html], {type: 'text/html'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href = url; a.download='document.html'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); showNotif('.html téléchargé'); }
+
+// .docx export using docx library (basic conversion)
+async function exportDocx(){ try{ const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType } = window.docx; const doc = new Document(); // convert header
+    if(docHeader.innerText.trim()) doc.addSection({children:[new Paragraph({children:[new TextRun(docHeader.innerText.trim())]})]});
+    // convert page content
+    Array.from(document.getElementById('page').childNodes).forEach(node=>{
+      if(node.nodeType===3){ if(node.nodeValue.trim()) doc.addSection({children:[new Paragraph(node.nodeValue)]}); }
+      else if(node.nodeName==='P' || node.nodeName==='DIV' || node.nodeName==='H1' || node.nodeName==='H2' || node.nodeName==='H3'){
+        if(node.innerText && node.innerText.trim()) doc.addSection({children:[new Paragraph(node.innerText.trim())]});
+      } else if(node.nodeName==='TABLE'){
+        const rows = Array.from(node.querySelectorAll('tr')).map(tr=>{
+          const cells = Array.from(tr.children).map(td=>new TableCell({width:{size:Math.floor(100/tr.children.length),type:WidthType.PERCENTAGE},children:[new Paragraph(td.innerText || '')]}));
+          return new TableRow({children:cells});
+        });
+        const table = new Table({rows}); doc.addSection({children:[table]});
+      }
+    });
+    // footer
+    if(docFooter.innerText.trim()) doc.addSection({children:[new Paragraph(docFooter.innerText.trim())]});
+    const packer = new Packer(); const blob = await packer.toBlob(doc); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'document.docx'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); showNotif('.docx généré');
+  }catch(err){ console.error(err); showNotif('Impossible de générer .docx (contenu complexe)'); } }
+
+// autosave to localStorage
+function autosave(){ const data = {header:docHeader.innerHTML, content:document.getElementById('page').innerHTML, footer:docFooter.innerHTML, theme: document.documentElement.style.getPropertyValue('--bg') || ''}; localStorage.setItem('ippedition_save', JSON.stringify(data)); showNotif('Sauvegarde automatique'); }
+function manualSave(){ const data = {header:docHeader.innerHTML, content:document.getElementById('page').innerHTML, footer:docFooter.innerHTML}; localStorage.setItem('ippedition_save_manual', JSON.stringify(data)); showNotif('Sauvegarde enregistrée'); }
+function loadSaved(){ const s = localStorage.getItem('ippedition_save_manual') || localStorage.getItem('ippedition_save'); if(!s){ showNotif('Aucune sauvegarde trouvée'); return; } const data = JSON.parse(s); docHeader.innerHTML = data.header || ''; document.getElementById('page').innerHTML = data.content || ''; docFooter.innerHTML = data.footer || ''; showNotif('Sauvegarde chargée'); }
+
+// debounce autosave
+function scheduleAutosave(){ if(autosaveTimer) clearTimeout(autosaveTimer); autosaveTimer = setTimeout(autosave, 2000); }
+[editor, docHeader, docFooter].forEach(el=> el.addEventListener('input', scheduleAutosave));
+
+// paste handler: keep HTML
+editor.addEventListener('paste', function(e){ e.preventDefault(); const html = (e.clipboardData || window.clipboardData).getData('text/html'); const text = (e.clipboardData || window.clipboardData).getData('text/plain'); if(html) document.execCommand('insertHTML', false, html); else document.execCommand('insertText', false, text); });
+
+// keyboard shortcut save
+document.addEventListener('keydown', function(e){ if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='s'){ e.preventDefault(); exportDocx(); } });
+
+// load autosave on start
+window.addEventListener('load', ()=>{ const s = localStorage.getItem('ippedition_save'); if(s){ const data = JSON.parse(s); docHeader.innerHTML = data.header || docHeader.innerHTML; document.getElementById('page').innerHTML = data.content || document.getElementById('page').innerHTML; docFooter.innerHTML = data.footer || docFooter.innerHTML; showNotif('Récupération automatique chargée'); } });
+
+  </script>
+</body>
+</html>
